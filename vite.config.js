@@ -11,6 +11,10 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    include: ['tests/**/*.test.js']
+    include: ['tests/**/*.test.js'],
+    pool: 'threads',
+    fileParallelism: false,
+    minWorkers: 1,
+    maxWorkers: 1
   }
 })

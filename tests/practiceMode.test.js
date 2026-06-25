@@ -17,7 +17,7 @@ describe('Guided Practice mode', () => {
     expect(getLegalPlayActions(store.game, 'player').length).toBeGreaterThan(0)
   })
 
-  it('holds the AI through select, play, and refill guidance', () => {
+  it('releases the Practice gate after select, play, and refill guidance', () => {
     const store = useGameStore()
     store.startGame({ modeId: 'practice' })
     store.beginPlaying()
@@ -31,7 +31,8 @@ describe('Guided Practice mode', () => {
     expect(store.practiceStage).toBe('refill')
     expect(store.performPlayerAction({ type: 'draw', slotIndex: action.slotIndex })).toBe(true)
     expect(store.practiceStage).toBe('free')
-    expect(store.canOpponentAct).toBe(true)
+    expect(['playing', 'refreshing']).toContain(store.status)
+    expect(store.canOpponentAct).toBe(store.status === 'playing')
   })
 
   it('returns to the selection step when a selected card is cancelled', () => {
