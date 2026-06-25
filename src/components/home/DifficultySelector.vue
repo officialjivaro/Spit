@@ -1,155 +1,104 @@
+<template>
+  <div class="difficulty-selector">
+    <label class="difficulty-selector__label" for="difficulty">Difficulty</label>
+    <div class="difficulty-selector__field">
+      <select
+        id="difficulty"
+        class="difficulty-selector__select"
+        :value="modelValue"
+        @change="emit('update:modelValue', $event.target.value)"
+      >
+        <option v-for="option in options" :key="option.key" :value="option.key">
+          {{ option.label }}
+        </option>
+      </select>
+      <span class="difficulty-selector__seal" aria-hidden="true">級</span>
+    </div>
+    <p class="difficulty-selector__description">{{ selectedDescription }}</p>
+  </div>
+</template>
+
 <script setup>
-defineProps({
-  difficulties: {
-    type: Array,
-    required: true
-  },
+import { computed } from 'vue'
+import { DIFFICULTIES, DIFFICULTY_OPTIONS } from '../../constants/difficulties.js'
+
+const props = defineProps({
   modelValue: {
     type: String,
-    required: true
+    default: 'easy'
   }
 })
 
 const emit = defineEmits(['update:modelValue'])
+const options = DIFFICULTY_OPTIONS
+const selectedDescription = computed(() => DIFFICULTIES[props.modelValue]?.description || DIFFICULTIES.easy.description)
 </script>
-
-<template>
-  <!-- Difficulty Selector | Changes only the computer's reaction timing -->
-  <fieldset class="difficulty-selector">
-    <legend>Opponent speed</legend>
-    <div class="difficulty-options">
-      <label
-        v-for="difficulty in difficulties"
-        :key="difficulty.id"
-        class="difficulty-option"
-        :class="{ 'difficulty-option--selected': modelValue === difficulty.id }"
-      >
-        <input
-          type="radio"
-          name="difficulty"
-          :value="difficulty.id"
-          :checked="modelValue === difficulty.id"
-          @change="emit('update:modelValue', difficulty.id)"
-        />
-        <strong>{{ difficulty.name }}</strong>
-        <small>{{ difficulty.description }}</small>
-      </label>
-    </div>
-  </fieldset>
-</template>
 
 <style scoped>
 .difficulty-selector {
-  min-width: 0;
-  margin: 0;
-  padding: 0;
-  border: 0;
+  display: grid;
+  justify-items: start;
+  gap: 0.38rem;
+  inline-size: 100%;
 }
 
-.difficulty-selector legend {
-  margin-bottom: 0.45rem;
-  color: var(--color-text-muted);
-  font-size: 0.62rem;
-  font-weight: 850;
+.difficulty-selector__label {
+  color: var(--color-sakura-700);
+  font-size: 0.66rem;
+  font-weight: 900;
   letter-spacing: 0.13em;
   text-transform: uppercase;
 }
 
-.difficulty-options {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.42rem;
+.difficulty-selector__field {
+  position: relative;
+  inline-size: min(100%, 17rem);
 }
 
-.difficulty-option {
-  position: relative;
-  min-width: 0;
-  display: grid;
-  gap: 0.22rem;
-  padding: 0.62rem;
-  border: 1px solid rgba(192, 154, 82, 0.24);
+.difficulty-selector__select {
+  inline-size: 100%;
+  min-block-size: 2.75rem;
+  padding: 0.62rem 3rem 0.62rem 0.82rem;
+  border: 1px solid var(--paper-border-strong);
   border-radius: var(--radius-small);
   background:
-    linear-gradient(180deg, rgba(61, 58, 47, 0.56), rgba(14, 17, 14, 0.72));
+    repeating-linear-gradient(8deg, rgba(78, 58, 67, 0.016) 0 1px, transparent 1px 5px),
+    rgba(255, 253, 248, 0.92);
+  color: var(--color-ink);
+  font-size: 0.95rem;
+  font-weight: 800;
+  box-shadow: var(--shadow-soft);
   cursor: pointer;
-  transition:
-    border-color var(--transition-fast),
-    transform var(--transition-fast),
-    box-shadow var(--transition-fast);
+  appearance: none;
 }
 
-.difficulty-option::before {
-  content: '';
+.difficulty-selector__seal {
   position: absolute;
-  right: 0.48rem;
-  top: 0.48rem;
-  width: 0.42rem;
-  aspect-ratio: 1;
-  border: 1px solid rgba(207, 173, 105, 0.34);
+  inset-block-start: 50%;
+  inset-inline-end: 0.55rem;
+  display: grid;
+  place-items: center;
+  inline-size: 1.7rem;
+  block-size: 1.7rem;
   border-radius: 50%;
-  background: #23231d;
-}
-
-.difficulty-option:hover {
-  transform: translateY(-1px);
-  border-color: var(--color-brass);
-}
-
-.difficulty-option--selected {
-  border-color: var(--color-secondary-bright);
-  box-shadow:
-    0 0 0 0.1rem rgba(61, 117, 111, 0.18),
-    var(--shadow-secondary);
-}
-
-.difficulty-option:focus-within {
-  outline: 3px solid var(--color-brass-bright);
-  outline-offset: 2px;
-}
-
-.difficulty-option--selected::before {
-  background: var(--color-success);
-  box-shadow: 0 0 0.55rem rgba(141, 167, 103, 0.58);
-}
-
-.difficulty-option input {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.difficulty-option strong {
-  color: var(--color-parchment);
+  background: var(--color-sakura-100);
+  color: var(--color-sakura-700);
   font-family: var(--font-display);
-  font-size: clamp(0.64rem, 1.05vw, 0.8rem);
-  text-transform: uppercase;
+  font-weight: 900;
+  pointer-events: none;
+  transform: translateY(-50%);
 }
 
-.difficulty-option small {
-  color: var(--color-text-muted);
-  font-size: clamp(0.5rem, 0.75vw, 0.61rem);
+.difficulty-selector__select:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+.difficulty-selector__description {
+  max-inline-size: 23rem;
+  margin: 0;
+  color: var(--color-ink-muted);
+  font-size: clamp(0.68rem, 1.2vmin, 0.8rem);
+  font-weight: 650;
   line-height: 1.35;
 }
-
-@media (max-height: 650px) {
-  .difficulty-option small {
-    display: none;
-  }
-}
-
-@media (max-width: 500px), (max-height: 620px) {
-  .difficulty-option {
-    padding: 0.42rem;
-  }
-
-  .difficulty-option small {
-    display: none;
-  }
-}
-
-@media (max-height: 420px) {
-  .difficulty-selector legend { margin-bottom: 0.22rem; }
-  .difficulty-option { padding: 0.3rem 0.38rem; }
-}
-
 </style>

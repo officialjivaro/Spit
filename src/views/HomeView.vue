@@ -1,403 +1,500 @@
-<script setup>
-import { computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import AppButton from '../components/common/AppButton.vue'
-import PlayingCard from '../components/game/PlayingCard.vue'
-import DifficultySelector from '../components/home/DifficultySelector.vue'
-import MatchSettings from '../components/home/MatchSettings.vue'
-import ModeSelector from '../components/home/ModeSelector.vue'
-import StatsPanel from '../components/home/StatsPanel.vue'
-import { DIFFICULTIES, GAME_MODES } from '../config/gameOptions.js'
-import {
-  PRACTICE_MATCH_SETTINGS,
-  classifyMatch,
-  matchClassificationLabel
-} from '../config/matchSettings.js'
-import { createStandardDeck } from '../game/cards.js'
-import { useGameStore } from '../stores/game.js'
-
-const router = useRouter()
-const store = useGameStore()
-const deck = createStandardDeck()
-const sampleCards = [deck[12], deck[27], deck[41]]
-
-const selectedMode = computed({
-  get: () => store.modeId,
-  set: (value) => store.setMode(value)
-})
-
-const selectedDifficulty = computed({
-  get: () => store.difficultyId,
-  set: (value) => store.setDifficulty(value)
-})
-
-const isPractice = computed(() => selectedMode.value === 'practice')
-const displayedSettings = computed(() =>
-  isPractice.value ? PRACTICE_MATCH_SETTINGS : store.matchSettings
-)
-const classification = computed(() =>
-  classifyMatch(selectedMode.value, displayedSettings.value)
-)
-const classificationLabel = computed(() => matchClassificationLabel(classification.value))
-const startLabel = computed(() =>
-  isPractice.value ? 'Start Guided Practice' : 'Start Quick Game'
-)
-
-function updateSetting(settingId, value) {
-  store.setMatchSetting(settingId, value)
-}
-
-function startGame() {
-  store.startGame({
-    modeId: selectedMode.value,
-    difficultyId: selectedDifficulty.value,
-    matchSettings: store.matchSettings
-  })
-  router.push({ name: 'play' })
-}
-
-onMounted(() => {
-  if (store.status === 'finished') store.abandonGame({ keepResult: true })
-})
-</script>
-
 <template>
-  <!-- Home Screen | Configures Standard, Custom, or Guided Practice matches -->
-  <section class="home-view" aria-labelledby="home-title">
-    <div class="home-panel">
-      <div class="home-visual" aria-hidden="true">
-        <div class="visual-copy">
-          <span>Mechanized Card Racing</span>
-          <strong>Think fast.<br />Strike first.</strong>
+  <section class="home-view app-page">
+    <div class="home-dashboard">
+      <WashiPanel variant="feature" class="home-feature">
+        <div class="home-feature__brand">
+          <p class="eyebrow">A quiet puzzle among the blossoms</p>
+          <h1 class="home-feature__title display-title">SUDOKU</h1>
+          <p class="home-feature__subtitle">Pause. Focus. Complete the grid.</p>
+          <span class="home-feature__divider" aria-hidden="true">❀</span>
         </div>
-        <div class="card-fan">
-          <div
-            v-for="(card, index) in sampleCards"
-            :key="card.id"
-            class="fan-card"
-            :class="`fan-card--${index}`"
-          >
-            <PlayingCard :card="card" />
+
+        <div class="home-feature__selection">
+          <div class="home-feature__mode">
+            <span class="home-feature__mode-mark" aria-hidden="true">{{ selectedModeIcon }}</span>
+            <div>
+              <span>Selected mode</span>
+              <strong>{{ selectedMode.label }}</strong>
+            </div>
           </div>
-        </div>
-        <div class="visual-instruction">
-          <kbd>1</kbd><span>+</span><kbd>←</kbd><strong>Play left</strong>
-        </div>
-      </div>
-
-      <div class="home-content">
-        <header class="home-intro">
-          <span class="home-kicker">Classic Speed · Tactical Solo</span>
-          <h1 id="home-title">Clear your cards first</h1>
-          <p>Play one rank higher or lower. Suits do not matter, and Ace connects to 2 and King.</p>
-        </header>
-
-        <ModeSelector v-model="selectedMode" :modes="GAME_MODES" />
-
-        <DifficultySelector
-          v-if="!isPractice"
-          v-model="selectedDifficulty"
-          :difficulties="DIFFICULTIES"
-        />
-        <div v-else class="practice-brief">
-          <strong>Guided training protocol</strong>
-          <span>The opponent waits while you learn, then continues at a slow natural pace.</span>
+          <p>{{ selectedMode.description }}</p>
         </div>
 
-        <MatchSettings
-          :settings="displayedSettings"
-          :classification-label="classificationLabel"
-          :locked="isPractice"
-          @update-setting="updateSetting"
-          @reset="store.resetMatchSettings()"
-        />
+        <DifficultySelector v-if="showDifficulty" v-model="difficulty" />
+        <WashiPanel v-else tag="div" variant="inset" class="home-feature__daily">
+          <span class="eyebrow">Today’s shared puzzle</span>
+          <p>{{ dailyStatusMessage }}</p>
+        </WashiPanel>
 
-        <StatsPanel :statistics="store.statistics" :difficulty-id="selectedDifficulty" />
-
-        <div class="home-footer">
-          <details class="rules-disclosure">
-            <summary>Controls & rules</summary>
-            <p>
-              Press <strong>1–5</strong> or tap a card, then use an arrow or tap a center pile.
-              Press or tap an empty slot to draw.
-            </p>
-          </details>
-          <AppButton size="large" block @click="startGame">{{ startLabel }}</AppButton>
+        <div class="home-feature__utilities">
+          <ToggleSwitch label="Music" :model-value="isPlaying" @update:model-value="handleMusicChange" />
+          <span class="home-feature__mode-rule">{{ selectedModeRule }}</span>
         </div>
+
+        <p v-if="errorMessage || online.state.startError" class="home-feature__message" role="status">
+          {{ errorMessage || online.state.startError }}
+        </p>
+
+        <AppButton class="home-feature__play" size="large" :disabled="isStarting" @click="beginGame">
+          {{ isStarting ? 'Preparing…' : callToAction }}
+        </AppButton>
+      </WashiPanel>
+
+      <div class="home-dashboard__side">
+        <WashiPanel variant="main" class="home-modes">
+          <div class="home-section-heading">
+            <div>
+              <p class="eyebrow">Ways to play</p>
+              <h2 class="section-title">Choose your rhythm</h2>
+            </div>
+            <span class="home-section-heading__stamp" aria-hidden="true">遊</span>
+          </div>
+          <GameModeSelector v-model="mode" :daily-state="dailyState" />
+        </WashiPanel>
+
+        <WashiPanel variant="inset" class="home-stats">
+          <div class="home-section-heading home-section-heading--compact">
+            <div>
+              <p class="eyebrow">Your local record</p>
+              <h2 class="section-title">Quiet progress</h2>
+            </div>
+          </div>
+          <LocalStatsSummary :stats="stats" />
+        </WashiPanel>
       </div>
     </div>
   </section>
 </template>
 
+<script setup>
+import { computed, nextTick, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import GameModeSelector from '../components/home/GameModeSelector.vue'
+import LocalStatsSummary from '../components/home/LocalStatsSummary.vue'
+import DifficultySelector from '../components/home/DifficultySelector.vue'
+import AppButton from '../components/ui/AppButton.vue'
+import ToggleSwitch from '../components/ui/ToggleSwitch.vue'
+import WashiPanel from '../components/ui/WashiPanel.vue'
+import { useAudioPlayer } from '../composables/useAudioPlayer.js'
+import { useOnlineAccount } from '../composables/useOnlineAccount.js'
+import { useSudokuOnline } from '../composables/useSudokuOnline.js'
+import { useGameSession } from '../composables/useGameSession.js'
+import { usePlayerStats } from '../composables/usePlayerStats.js'
+import { GAME_MODES } from '../constants/gameModes.js'
+import { getUtcDateKey } from '../services/dailyChallengeService.js'
+import { createId } from '../utils/createId.js'
+
+const router = useRouter()
+const mode = ref('classic')
+const difficulty = ref('easy')
+const isStarting = ref(false)
+const { isPlaying, errorMessage, setPlaying } = useAudioPlayer()
+const { game, startGame, showStoredResult, attachOnlineRun } = useGameSession()
+const account = useOnlineAccount()
+const online = useSudokuOnline()
+const { stats, refreshStats } = usePlayerStats()
+
+const selectedMode = computed(() => GAME_MODES[mode.value])
+const showDifficulty = computed(() => !selectedMode.value.fixedDifficulty)
+const dailyState = computed(() => stats.dailyCompletion ? 'completed' : stats.dailyProgress ? 'resume' : 'new')
+const selectedModeIcon = computed(() => ({ classic: '井', daily: '日', sprint: '刻', zen: '○' })[mode.value])
+const selectedModeRule = computed(() => ({
+  classic: 'Timer · mistakes · hints',
+  daily: 'Same Medium puzzle worldwide',
+  sprint: '15 / 10 / 7 minute countdown',
+  zen: 'No visible timer or mistakes'
+})[mode.value])
+
+const dailyStatusMessage = computed(() => {
+  if (stats.dailyCompletion) return 'Today’s challenge is complete. Your result is ready to revisit.'
+  if (stats.dailyProgress) return 'Your Daily Challenge is saved on this device and ready to resume.'
+  return 'Everyone receives the same Medium puzzle for the current UTC date.'
+})
+
+const callToAction = computed(() => {
+  if (mode.value === 'daily') {
+    if (stats.dailyCompletion) return 'View Today’s Result'
+    return stats.dailyProgress ? 'Resume Daily Challenge' : 'Start Daily Challenge'
+  }
+
+  return {
+    classic: 'Play Classic',
+    sprint: 'Start Sprint',
+    zen: 'Enter Zen'
+  }[mode.value]
+})
+
+onMounted(() => refreshStats())
+
+async function handleMusicChange(value) {
+  await setPlaying(value)
+}
+
+async function beginGame() {
+  if (isStarting.value) return
+
+  isStarting.value = true
+  await nextTick()
+
+  try {
+    if (mode.value === 'daily' && stats.dailyCompletion) {
+      showStoredResult(stats.dailyCompletion)
+      await router.push({ name: 'end' })
+      return
+    }
+
+    const selectedDifficulty = selectedMode.value.fixedDifficulty || difficulty.value
+    const dailyDate = mode.value === 'daily' ? getUtcDateKey() : null
+    const clientRunId = createId()
+    online.clearResultStatus()
+
+    if (mode.value === 'daily') {
+      refreshStats()
+
+      if (stats.dailyProgress) {
+        const resumeResult = startGame({
+          mode: mode.value,
+          difficulty: selectedDifficulty,
+          dateKey: dailyDate
+        })
+
+        if (resumeResult?.resumed) {
+          if (account.isAuthenticated.value) {
+            const resumedOnlineRun = await online.prepareRun({
+              mode: mode.value,
+              difficulty: selectedDifficulty,
+              dailyDate,
+              clientRunId: game.clientRunId
+            }, true)
+
+            if (resumedOnlineRun) attachOnlineRun(resumedOnlineRun)
+          }
+
+          await router.push({
+            name: 'game',
+            query: { mode: mode.value, difficulty: selectedDifficulty }
+          })
+          return
+        }
+      }
+    }
+
+    const onlineRun = await online.prepareRun({
+      mode: mode.value,
+      difficulty: selectedDifficulty,
+      dailyDate,
+      clientRunId
+    }, account.isAuthenticated.value)
+
+    startGame({
+      mode: mode.value,
+      difficulty: selectedDifficulty,
+      dateKey: dailyDate,
+      clientRunId,
+      onlineRun,
+      generatedPuzzle: onlineRun
+        ? { puzzle: onlineRun.puzzle, solution: onlineRun.solution }
+        : null
+    })
+
+    if (onlineRun && !game.onlineRunToken) attachOnlineRun(onlineRun)
+
+    if (game.status === 'completed') {
+      await router.push({ name: 'end' })
+      return
+    }
+
+    await router.push({
+      name: 'game',
+      query: {
+        mode: mode.value,
+        difficulty: selectedDifficulty
+      }
+    })
+  } finally {
+    isStarting.value = false
+  }
+}
+</script>
+
 <style scoped>
 .home-view {
-  width: 100%;
-  height: 100%;
-  min-height: 0;
+  padding: var(--page-gutter);
+}
+
+.home-dashboard {
   display: grid;
-  place-items: center;
-  padding: clamp(0.42rem, 1.35vw, 1.15rem);
-  overflow: hidden;
+  grid-template-columns: minmax(17rem, 0.86fr) minmax(25rem, 1.14fr);
+  gap: clamp(0.6rem, 1.4vw, 1rem);
+  inline-size: min(97vw, 78rem);
+  block-size: min(100%, 50rem);
+  min-block-size: 0;
 }
 
-.home-panel {
-  position: relative;
-  width: min(var(--content-max-width), 100%);
-  height: 100%;
-  min-height: 0;
+.home-feature,
+.home-dashboard__side,
+.home-modes,
+.home-stats {
+  min-block-size: 0;
+}
+
+.home-feature :deep(.washi-panel__content) {
   display: grid;
-  grid-template-columns: minmax(15rem, 0.72fr) minmax(29rem, 1.28fr);
-  gap: clamp(0.55rem, 1.2vw, 1rem);
-  padding: clamp(0.55rem, 1.2vw, 1rem);
-  overflow: hidden;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-large);
-  background:
-    repeating-linear-gradient(90deg, rgba(219, 181, 107, 0.018) 0 1px, transparent 1px 0.8rem),
-    linear-gradient(145deg, rgba(48, 46, 37, 0.96), rgba(13, 16, 13, 0.98));
-  box-shadow: var(--shadow-panel);
+  align-content: center;
+  gap: clamp(0.65rem, 1.45dvh, 1rem);
+  block-size: 100%;
 }
 
-.home-panel::before,
-.home-panel::after {
-  content: '';
-  position: absolute;
-  z-index: 3;
-  width: 0.5rem;
-  height: 0.5rem;
-  border: 1px solid rgba(215, 180, 109, 0.48);
-  border-radius: 50%;
-  background: #2c2b24;
-  pointer-events: none;
+.home-feature__brand {
+  display: grid;
+  justify-items: start;
+  gap: 0.12rem;
 }
 
-.home-panel::before { left: 0.5rem; top: 0.5rem; }
-.home-panel::after { right: 0.5rem; bottom: 0.5rem; }
-
-.home-visual {
-  position: relative;
-  min-width: 0;
-  min-height: 0;
-  overflow: hidden;
-  border: 1px solid rgba(203, 166, 96, 0.38);
-  border-radius: var(--radius-medium);
-  background:
-    linear-gradient(180deg, transparent, rgba(7, 9, 7, 0.62)),
-    radial-gradient(circle at 50% 58%, rgba(166, 64, 52, 0.2), transparent 38%),
-    linear-gradient(145deg, #393428, #1b211c 72%);
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.48), 0 0 2rem rgba(166, 64, 52, 0.1) inset;
+.home-feature__title {
+  margin: 0;
+  font-size: clamp(3.7rem, 9.3vmin, 7rem);
+  line-height: 0.9;
 }
 
-.home-visual::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  opacity: 0.3;
-  background-image:
-    linear-gradient(rgba(218, 181, 108, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(218, 181, 108, 0.06) 1px, transparent 1px),
-    linear-gradient(135deg, transparent 45%, rgba(132, 48, 39, 0.11) 45.2% 54.8%, transparent 55%);
-  background-size: 2.2rem 2.2rem, 2.2rem 2.2rem, 100% 100%;
-}
-
-.visual-copy {
-  position: absolute;
-  z-index: 2;
-  left: 8%;
-  top: 8%;
-}
-
-.visual-copy span {
-  display: block;
-  margin-bottom: 0.4rem;
-  color: var(--color-secondary-bright);
-  font-size: clamp(0.5rem, 0.9vw, 0.68rem);
-  font-weight: 850;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-}
-
-.visual-copy strong {
-  color: var(--color-parchment);
+.home-feature__subtitle {
+  margin: 0.35rem 0 0;
+  color: var(--color-ink-soft);
   font-family: var(--font-display);
-  font-size: clamp(1.3rem, 3.4vw, 2.8rem);
-  line-height: 1.02;
-  text-transform: uppercase;
-  text-shadow: 0 4px 18px rgba(0, 0, 0, 0.68), 0 0 2rem rgba(166, 64, 52, 0.2);
+  font-size: clamp(0.92rem, 1.8vmin, 1.2rem);
+  font-style: italic;
 }
 
-.card-fan {
-  position: absolute;
-  z-index: 2;
-  left: 50%;
-  top: 58%;
-  width: min(72%, 24rem);
-  height: 54%;
-  transform: translate(-50%, -50%);
-}
-
-.fan-card {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: clamp(5rem, 10.5vw, 8rem);
-  aspect-ratio: 1 / var(--card-ratio);
-  transform-origin: 50% 110%;
-  filter: drop-shadow(0 16px 18px rgba(0, 0, 0, 0.4));
-}
-
-.fan-card--0 { transform: translate(-85%, -40%) rotate(-17deg); }
-.fan-card--1 { z-index: 2; transform: translate(-50%, -54%); }
-.fan-card--2 { transform: translate(-15%, -40%) rotate(17deg); }
-
-.visual-instruction {
-  position: absolute;
-  z-index: 3;
-  left: 50%;
-  bottom: 5%;
+.home-feature__divider {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.45rem 0.65rem;
-  border: 1px solid rgba(198, 158, 84, 0.38);
-  border-radius: var(--radius-small);
-  color: var(--color-text-muted);
-  font-size: 0.6rem;
-  background: rgba(13, 16, 13, 0.82);
-  transform: translateX(-50%);
-  white-space: nowrap;
+  gap: 0.45rem;
+  inline-size: 100%;
+  margin-block-start: 0.35rem;
+  color: var(--color-sakura-500);
 }
 
-.visual-instruction kbd {
+.home-feature__divider::before,
+.home-feature__divider::after {
+  block-size: 1px;
+  flex: 1;
+  background: linear-gradient(90deg, transparent, rgba(127, 60, 81, 0.38));
+  content: '';
+}
+
+.home-feature__divider::after {
+  background: linear-gradient(90deg, rgba(127, 60, 81, 0.38), transparent);
+}
+
+.home-feature__selection {
   display: grid;
-  min-width: 1.5rem;
-  height: 1.4rem;
+  gap: 0.4rem;
+  padding-block: 0.25rem;
+}
+
+.home-feature__mode {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.home-feature__mode-mark,
+.home-section-heading__stamp {
+  display: grid;
   place-items: center;
-  border: 1px solid var(--color-brass);
-  border-radius: 0.22rem;
-  color: var(--color-parchment);
-  background: linear-gradient(180deg, #4b3a26, #211d16);
-}
-
-.visual-instruction strong { color: var(--color-accent-bright); text-transform: uppercase; }
-
-.home-content {
-  min-width: 0;
-  min-height: 0;
-  display: grid;
-  grid-template-rows: auto auto auto auto auto auto;
-  align-content: center;
-  gap: clamp(0.32rem, 0.7vh, 0.6rem);
-}
-
-.home-kicker {
-  color: var(--color-secondary-bright);
-  font-size: clamp(0.48rem, 0.78vw, 0.64rem);
-  font-weight: 850;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-}
-
-.home-intro h1 {
-  margin: 0.2rem 0 0.3rem;
-  color: var(--color-parchment);
+  inline-size: 2.55rem;
+  block-size: 2.55rem;
+  border: 1px solid rgba(127, 60, 81, 0.34);
+  border-radius: 50%;
+  background: var(--color-sakura-100);
+  color: var(--color-sakura-700);
   font-family: var(--font-display);
-  font-size: clamp(1.25rem, 3vw, 2.45rem);
-  line-height: 1.02;
+  font-size: 1.2rem;
+  font-weight: 900;
+}
+
+.home-feature__mode div {
+  display: grid;
+  gap: 0.05rem;
+}
+
+.home-feature__mode div span {
+  color: var(--color-ink-muted);
+  font-size: 0.6rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
-.home-intro p {
+.home-feature__mode strong {
+  color: var(--color-ink);
+  font-family: var(--font-display);
+  font-size: clamp(1.1rem, 2.2vmin, 1.5rem);
+}
+
+.home-feature__selection > p,
+.home-feature__daily p {
   margin: 0;
-  color: var(--color-text-muted);
-  font-size: clamp(0.58rem, 0.86vw, 0.74rem);
-  line-height: 1.4;
+  color: var(--color-ink-muted);
+  font-size: clamp(0.72rem, 1.3vmin, 0.86rem);
+  line-height: 1.45;
 }
 
-.practice-brief {
+.home-feature__daily :deep(.washi-panel__content) {
   display: grid;
-  gap: 0.16rem;
-  padding: 0.58rem 0.68rem;
-  border: 1px solid rgba(134, 188, 177, 0.42);
-  border-left: 3px solid var(--color-secondary-bright);
-  border-radius: var(--radius-small);
-  background: rgba(17, 28, 24, 0.62);
+  gap: 0.3rem;
+  padding: 0.7rem;
 }
 
-.practice-brief strong {
-  color: var(--color-parchment);
-  font-family: var(--font-display);
-  font-size: 0.7rem;
-  text-transform: uppercase;
+.home-feature__utilities {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
 }
 
-.practice-brief span { color: var(--color-text-muted); font-size: 0.58rem; }
+.home-feature__mode-rule {
+  color: var(--color-ink-muted);
+  font-size: 0.68rem;
+  font-weight: 750;
+}
 
-.home-footer {
+.home-feature__message {
+  margin: 0;
+  color: var(--color-danger);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.home-feature__play {
+  justify-self: start;
+  min-inline-size: clamp(11rem, 19vw, 15rem);
+}
+
+.home-dashboard__side {
   display: grid;
-  grid-template-columns: minmax(10rem, 0.8fr) minmax(14rem, 1.2fr);
-  align-items: stretch;
-  gap: 0.5rem;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: clamp(0.6rem, 1.4vw, 1rem);
 }
 
-.rules-disclosure {
-  min-width: 0;
-  padding: 0.58rem 0.68rem;
-  border: 1px solid rgba(193, 155, 83, 0.26);
-  border-radius: var(--radius-small);
-  background: rgba(15, 18, 15, 0.66);
+.home-modes :deep(.washi-panel__content) {
+  display: grid;
+  align-content: center;
+  gap: 0.7rem;
+  block-size: 100%;
 }
 
-.rules-disclosure summary {
-  color: var(--color-brass-bright);
-  font-size: 0.62rem;
-  font-weight: 850;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  cursor: pointer;
+.home-stats :deep(.washi-panel__content) {
+  display: grid;
+  gap: 0.55rem;
 }
 
-.rules-disclosure p {
-  margin: 0.4rem 0 0;
-  color: var(--color-text-muted);
-  font-size: 0.58rem;
-  line-height: 1.35;
+.home-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
 }
 
-@media (max-width: 900px) {
-  .home-panel { grid-template-columns: 0.48fr 1.52fr; }
+.home-section-heading--compact {
+  align-items: end;
 }
 
-@media (max-width: 760px) {
-  .home-panel { grid-template-columns: 1fr; }
-  .home-visual { display: none; }
+@media (max-width: 55rem) {
+  .home-dashboard {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
+    inline-size: min(96vw, 44rem);
+    overflow: hidden;
+  }
+
+  .home-feature :deep(.washi-panel__content) {
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+    gap: 0.55rem 0.8rem;
+  }
+
+  .home-feature__brand,
+  .home-feature__selection {
+    grid-column: 1;
+  }
+
+  .home-feature :deep(.difficulty-selector),
+  .home-feature__daily,
+  .home-feature__utilities,
+  .home-feature__message,
+  .home-feature__play {
+    grid-column: 2;
+  }
+
+  .home-feature__title {
+    font-size: clamp(2.8rem, 9vw, 5rem);
+  }
 }
 
-@media (max-width: 520px) {
-  .home-view { padding: 0.3rem; }
-  .home-panel { padding: 0.42rem; }
-  .home-intro p { display: none; }
-  .home-footer { grid-template-columns: 1fr; }
-  .rules-disclosure { display: none; }
-}
+@media (max-width: 39rem) {
+  .home-dashboard {
+    grid-template-rows: auto minmax(0, 1fr);
+  }
 
-@media (max-height: 620px) {
-  .home-intro p,
-  .rules-disclosure {
+  .home-feature :deep(.washi-panel__content) {
+    grid-template-columns: 1fr;
+  }
+
+  .home-feature__brand,
+  .home-feature__selection,
+  .home-feature :deep(.difficulty-selector),
+  .home-feature__daily,
+  .home-feature__utilities,
+  .home-feature__message,
+  .home-feature__play {
+    grid-column: 1;
+  }
+
+  .home-feature__selection > p,
+  .home-feature__subtitle,
+  .home-feature__mode-rule {
     display: none;
   }
-  .home-footer { grid-template-columns: 1fr; }
+
+  .home-feature__play {
+    justify-self: stretch;
+  }
 }
 
-@media (max-height: 520px) {
-  .home-intro { display: none; }
-  .home-content { gap: 0.24rem; }
+@media (max-height: 41rem) and (min-width: 55.01rem) {
+  .home-dashboard {
+    block-size: 100%;
+  }
+
+  .home-feature__subtitle,
+  .home-feature__selection > p,
+  .home-feature__mode-rule {
+    display: none;
+  }
+
+  .home-feature__title {
+    font-size: clamp(3.2rem, 8dvh, 4.5rem);
+  }
 }
 
-@media (max-height: 420px) {
-  .home-view { padding-block: 0.2rem; }
-  .home-panel { padding-block: 0.35rem; }
-  .home-content { gap: 0.18rem; }
-  .stats-panel { display: none; }
+@media (max-height: 37rem) {
+  .home-view {
+    padding-block: 0.25rem;
+  }
+
+  .home-dashboard {
+    gap: 0.4rem;
+  }
+
+  .home-feature__divider,
+  .home-stats {
+    display: none;
+  }
+
+  .home-dashboard__side {
+    grid-template-rows: 1fr;
+  }
 }
 </style>

@@ -1,17 +1,29 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
-import HomeView from '../views/HomeView.vue'
-import GameView from '../views/GameView.vue'
-import ResultsView from '../views/ResultsView.vue'
 
-// Router | Uses hash history so every view works on GitHub Pages
-const router = createRouter({
+const routes = [
+  {
+    path: '/',
+    name: 'home',
+    component: () => import('../views/HomeView.vue')
+  },
+  {
+    path: '/game',
+    name: 'game',
+    component: () => import('../views/GameView.vue')
+  },
+  {
+    path: '/end',
+    name: 'end',
+    component: () => import('../views/EndView.vue')
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    redirect: { name: 'home' }
+  }
+]
+
+export default createRouter({
   history: createWebHashHistory(),
-  routes: [
-    { path: '/', name: 'home', component: HomeView },
-    { path: '/play', name: 'play', component: GameView },
-    { path: '/results', name: 'results', component: ResultsView },
-    { path: '/:pathMatch(.*)*', redirect: '/' }
-  ]
+  routes,
+  scrollBehavior: () => ({ top: 0 })
 })
-
-export default router

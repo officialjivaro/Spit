@@ -6,15 +6,6 @@ export default defineConfig({
   base: './',
   build: {
     outDir: 'docs',
-    emptyOutDir: true,
-    assetsDir: 'SpeedGame/assets'
-  },
-  test: {
-    environment: 'node',
-    include: ['tests/**/*.test.js'],
-    pool: 'threads',
-    fileParallelism: false,
-    minWorkers: 1,
-    maxWorkers: 1
+    emptyOutDir: true
   }
 })
