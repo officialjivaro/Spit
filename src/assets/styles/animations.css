@@ -1,0 +1,121 @@
+/* Motion System | Gives the interface mechanical movement without controlling state */
+@keyframes ambient-drift {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(1.2rem, -0.7rem, 0) scale(1.04); }
+}
+
+@keyframes grid-shift {
+  from { background-position: 0 0; }
+  to { background-position: 3rem 3rem; }
+}
+
+@keyframes mechanical-scan {
+  from { transform: translateY(-110%); }
+  to { transform: translateY(210%); }
+}
+
+@keyframes card-arrive {
+  from { opacity: 0; transform: translateY(-0.55rem) scale(0.9) rotate(-1.5deg); }
+  to { opacity: 1; transform: translateY(0) scale(1) rotate(0); }
+}
+
+@keyframes center-card-arrive {
+  0% { opacity: 0.3; transform: translateY(-0.45rem) scale(0.92) rotate(-1deg); }
+  60% { opacity: 1; transform: translateY(0.08rem) scale(1.025) rotate(0.4deg); }
+  100% { opacity: 1; transform: translateY(0) scale(1) rotate(0); }
+}
+
+@keyframes card-deal {
+  from { opacity: 0; transform: translateY(-1.2rem) scale(0.82) rotate(3deg); }
+  to { opacity: 1; transform: translateY(0) scale(1) rotate(0); }
+}
+
+@keyframes invalid-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-0.35rem) rotate(-1deg); }
+  75% { transform: translateX(0.35rem) rotate(1deg); }
+}
+
+@keyframes pile-pulse {
+  0% { box-shadow: var(--shadow-card); }
+  45% {
+    box-shadow:
+      var(--shadow-card),
+      0 0 0 0.3rem rgba(166, 64, 52, 0.18),
+      0 0 1.8rem rgba(166, 64, 52, 0.42);
+  }
+  100% { box-shadow: var(--shadow-card); }
+}
+
+@keyframes refresh-flash {
+  0% { opacity: 0.48; transform: scale(0.91) rotate(-5deg); }
+  68% { opacity: 1; transform: scale(1.05) rotate(1.5deg); }
+  100% { opacity: 0.86; transform: scale(1) rotate(0); }
+}
+
+@keyframes countdown-pop {
+  0% { opacity: 0; transform: scale(0.58); }
+  55% { opacity: 1; transform: scale(1.12); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes result-rise {
+  from { opacity: 0; transform: translateY(1.2rem) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes status-pulse {
+  0%, 100% { opacity: 0.72; }
+  50% { opacity: 1; }
+}
+
+
+@keyframes legal-breathe {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.12); }
+}
+
+@keyframes ai-mistake-left {
+  0%, 100% { transform: translateX(0) rotate(0); }
+  42% { transform: translateX(-1.3rem) translateY(0.2rem) rotate(-5deg); filter: brightness(1.18); }
+  58% { transform: translateX(-1.05rem) translateY(0.15rem) rotate(-4deg); filter: saturate(1.2); }
+}
+
+@keyframes ai-mistake-right {
+  0%, 100% { transform: translateX(0) rotate(0); }
+  42% { transform: translateX(1.3rem) translateY(0.2rem) rotate(5deg); filter: brightness(1.18); }
+  58% { transform: translateX(1.05rem) translateY(0.15rem) rotate(4deg); filter: saturate(1.2); }
+}
+
+@keyframes pile-reject {
+  0%, 100% { box-shadow: var(--shadow-card); }
+  35%, 65% { box-shadow: 0 0 0 0.28rem rgba(211, 75, 63, 0.24), 0 0 1.8rem rgba(211, 75, 63, 0.48); }
+}
+
+@keyframes reserve-feed {
+  0% { opacity: 0.6; transform: translateY(0) scale(0.94); }
+  48% { opacity: 1; transform: translateY(-0.45rem) scale(1.04); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes stall-warning {
+  0% { opacity: 0; transform: scaleX(0.74); }
+  60% { opacity: 1; transform: scaleX(1.03); }
+  100% { opacity: 1; transform: scaleX(1); }
+}
+
+@keyframes guide-complete {
+  0%, 72% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0.35; transform: translateY(0.35rem); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+}
